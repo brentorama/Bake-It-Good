@@ -1,0 +1,67 @@
+proc bakeIt(string $these[]){
+    int $rX = `getAttr -l ($these[1]+".rx")`;
+    string $getPanels[];
+    string $getPanel[];
+    $getPanels = `getPanel -all`;
+    for ($one in $getPanels){
+        if (startsWith ($one, "model")){
+        $getPanel[`size $getPanel`] = $one;}
+    }
+    for ($one in $getPanel){isolateSelect -state 1 $one;}
+    float $minTime = `playbackOptions -q -minTime`;
+    float $maxTime = `playbackOptions -q -maxTime`;
+    string $range = ($minTime+":"+$maxTime);
+    if ($rX == 0){
+        bakeResults -simulation true -t $range -sampleBy 1 -disableImplicitControl true -preserveOutsideKeys true -at "tx" -at "ty" -at "tz" -at "rx" -at "ry" -at "rz" $these[(size($these)-1)];
+    }else{
+        bakeResults -simulation true -t $range -sampleBy 1 -disableImplicitControl true -preserveOutsideKeys true -at "tx" -at "ty" -at "tz" $these[(size($these)-1)];
+    }
+    for ($one in $getPanel){isolateSelect -state 0 $one;} 
+}
+
+proc justBakeIt(string $these[]){
+    bakeIt($these);
+    delete -cn;
+}
+
+proc conBakeIt(string $these[]){
+    string $deleteMe[];
+        int $rX = `getAttr -l ($these[1]+".rx")`;
+    if (size($these)!=2){warning "You must select both the driver and the object to be baked";
+        }else{   
+            if ($rX == 0){ 
+            $deleteMe = `parentConstraint -n "deleteMePC" $these[0] $these[1]`;
+            }else{
+            $deleteMe = `pointConstraint -n "deleteMePointC" $these[0] $these[1]`;
+            }
+        select -cl;
+        bakeIt($these);
+        select $deleteMe ;
+        delete;
+        }
+    }
+    
+     proc bakeItSetup(){
+     string $message;
+     string $these[] = `ls -sl`;
+     int $size = `size $these`;
+     if ($size<1){warning "You must select the object(s) to be baked";}else
+         {
+             if ($size!=1){$message = ("Constrain "+$these[1]+" to "+$these[0]+"?");}else{$message = ("Bake "+$these[0]+"?");}
+        $bakeIt =`confirmDialog -title "Bake it?" -message $message
+        -button "Constrain and Bake" -button "Just Bake" -button "No"
+        -defaultButton "Constrain and Bake"
+        -cancelButton "No" 
+        -dismissString "No"`;
+        if( $bakeIt == "Constrain and Bake" ) {
+            conBakeIt($these);
+        } else if( $bakeIt == "Just Bake" ) {
+            justBakeIt($these);
+        } else {
+            print("User says no\n");
+        }
+    
+    }
+}
+    
+bakeItSetup;
